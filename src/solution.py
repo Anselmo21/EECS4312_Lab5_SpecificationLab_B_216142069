@@ -13,7 +13,6 @@ Assumptions (reasonable/consistent format):
 - Requests are interpreted as *simultaneous* (i.e., total demand per resource is the sum across all requests).
 - Any resource not present in `resources` has capacity 0 (so any positive request for it makes allocation infeasible).
 """
-
 from typing import Dict, List, Union
 
 Number = Union[int, float]
@@ -26,42 +25,50 @@ def is_allocation_feasible(
     """
     Determine whether a set of resource requests can be satisfied given limited capacities.
 
-    Args:
-        resources : Dict[str, Number], Mapping from resource name to total available capacity.
-        requests : List[Dict[str, Number]], List of requests. Each request is a mapping
-                   from resource name to the amount required.
-
-    Returns:
-        True if the allocation is feasible, False otherwise.
+    Raises:
+        ValueError: if inputs are structurally invalid (e.g., a request is not a dict).
     """
-    # Basic validation: capacities must be numeric and non-negative
-    for rname, cap in resources.items():
-        if not isinstance(cap, (int, float)):
-            return False
-        if cap < 0:
-            return False
+    # Structural validation for resources
+    if not isinstance(resources, dict):
+        raise ValueError(
+            "resources must be a dict mapping resource name to capacity")
 
-    # Aggregate total demand per resource across all requests
+    for rname, cap in resources.items():
+        if not isinstance(rname, str):
+            raise ValueError("resource names must be strings")
+        if not isinstance(cap, (int, float)):
+            raise ValueError(
+                f"capacity for resource '{rname}' must be numeric")
+        if cap < 0:
+            raise ValueError(
+                f"capacity for resource '{rname}' cannot be negative")
+
+    # Structural validation for requests
+    if not isinstance(requests, list):
+        raise ValueError("requests must be a list of dicts")
+
     total_demand: Dict[str, float] = {}
 
-    for req in requests:
+    for idx, req in enumerate(requests):
         if not isinstance(req, dict):
-            return False
+            raise ValueError(f"request at index {idx} must be a dict")
 
         for rname, amount in req.items():
+            if not isinstance(rname, str):
+                raise ValueError("requested resource names must be strings")
             if not isinstance(amount, (int, float)):
-                return False
-
-            # Negative demand doesn't make sense in this context; treat as invalid / infeasible
+                raise ValueError(
+                    f"amount for resource '{rname}' in request {idx} must be numeric")
             if amount < 0:
-                return False
+                raise ValueError(
+                    f"amount for resource '{rname}' in request {idx} cannot be negative")
 
             total_demand[rname] = total_demand.get(rname, 0.0) + float(amount)
 
-    # Check feasibility: demand must not exceed capacity for any resource
+    # Feasibility check (missing resource => 0 capacity)
     for rname, demand in total_demand.items():
-        cap = resources.get(rname, 0.0)  # missing resource => 0 capacity
-        if demand > float(cap):
+        cap = float(resources.get(rname, 0.0))
+        if demand > cap:
             return False
 
     return True
