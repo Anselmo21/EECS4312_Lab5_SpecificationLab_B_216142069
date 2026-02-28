@@ -25,50 +25,56 @@ def is_allocation_feasible(
     """
     Determine whether a set of resource requests can be satisfied given limited capacities.
 
+    Additional requirement:
+    At least one resource must remain unallocated after assignment.
+    An allocation that consumes all available resources is not valid.
+
     Raises:
-        ValueError: if inputs are structurally invalid (e.g., a request is not a dict).
+        ValueError if the inputs are structurally invalid.
     """
-    # Structural validation for resources
+
+    # Validate resources structure
     if not isinstance(resources, dict):
-        raise ValueError(
-            "resources must be a dict mapping resource name to capacity")
+        raise ValueError("resources must be a dictionary")
 
     for rname, cap in resources.items():
         if not isinstance(rname, str):
             raise ValueError("resource names must be strings")
         if not isinstance(cap, (int, float)):
-            raise ValueError(
-                f"capacity for resource '{rname}' must be numeric")
+            raise ValueError("resource capacity must be numeric")
         if cap < 0:
-            raise ValueError(
-                f"capacity for resource '{rname}' cannot be negative")
+            raise ValueError("resource capacity cannot be negative")
 
-    # Structural validation for requests
+    # Validate requests structure
     if not isinstance(requests, list):
-        raise ValueError("requests must be a list of dicts")
+        raise ValueError("requests must be a list")
 
     total_demand: Dict[str, float] = {}
 
-    for idx, req in enumerate(requests):
+    for i, req in enumerate(requests):
         if not isinstance(req, dict):
-            raise ValueError(f"request at index {idx} must be a dict")
+            raise ValueError("each request must be a dictionary")
 
         for rname, amount in req.items():
             if not isinstance(rname, str):
-                raise ValueError("requested resource names must be strings")
+                raise ValueError("resource names in requests must be strings")
             if not isinstance(amount, (int, float)):
-                raise ValueError(
-                    f"amount for resource '{rname}' in request {idx} must be numeric")
+                raise ValueError("request amounts must be numeric")
             if amount < 0:
-                raise ValueError(
-                    f"amount for resource '{rname}' in request {idx} cannot be negative")
+                raise ValueError("request amounts cannot be negative")
 
-            total_demand[rname] = total_demand.get(rname, 0.0) + float(amount)
+            total_demand[rname] = total_demand.get(rname, 0) + amount
 
-    # Feasibility check (missing resource => 0 capacity)
+    # Check capacity constraints
     for rname, demand in total_demand.items():
-        cap = float(resources.get(rname, 0.0))
-        if demand > cap:
+        capacity = resources.get(rname, 0)
+        if demand > capacity:
             return False
 
-    return True
+    # New requirement: at least one resource must remain unused
+    for rname, capacity in resources.items():
+        demand = total_demand.get(rname, 0)
+        if capacity - demand > 0:
+            return True
+
+    return False

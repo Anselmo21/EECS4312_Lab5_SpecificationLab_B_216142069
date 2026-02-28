@@ -13,6 +13,7 @@ Assumptions (reasonable/consistent format):
 - Requests are interpreted as *simultaneous* (i.e., total demand per resource is the sum across all requests).
 - Any resource not present in `resources` has capacity 0 (so any positive request for it makes allocation infeasible).
 """
+
 from typing import Dict, List, Union
 
 Number = Union[int, float]
